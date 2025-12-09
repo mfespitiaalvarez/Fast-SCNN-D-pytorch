@@ -1,5 +1,14 @@
-# Fast-SCNN: Fast Semantic Segmentation Network
-A PyTorch implementation of [Fast-SCNN: Fast Semantic Segmentation Network](https://arxiv.org/pdf/1902.04502) from the paper by Rudra PK Poudel, Stephan Liwicki.
+# Fast-SCNN-D: Fast Semantic Segmentation Network with Depth
+
+This repository extends the original [Fast-SCNN](https://arxiv.org/pdf/1902.04502) implementation by adding depth/disparity information for improved semantic segmentation performance.
+
+## About
+
+This project is based on the Fast-SCNN repository by [Tramac](https://github.com/Tramac) and extends it with:
+- **RGB-D input support**: Incorporates disparity/depth information alongside RGB images
+- **Geometry Feature Generator**: Computes surface normals from disparity in real-time
+- **Adaptive Gated Fusion**: Learns to dynamically weight RGB vs depth features
+- **Dual-stream architecture**: Processes RGB and geometry features separately before fusion
 
 <p align="center"><img width="100%" src="./png/Fast-SCNN.png" /></p>
 
@@ -14,57 +23,166 @@ A PyTorch implementation of [Fast-SCNN: Fast Semantic Segmentation Network](http
 - <a href='#references'>Reference</a>
 
 ## Installation
-- Python 3.x. Recommended using [Anaconda3](https://www.anaconda.com/distribution/)
-- [PyTorch 1.0](https://pytorch.org/get-started/locally/). Install PyTorch by selecting your environment on the website and running the appropriate command. Such as:
-  ```
-  conda install pytorch torchvision cudatoolkit=9.0 -c pytorch
-  ```
-- Clone this repository.
-- Download the dataset by following the [instructions](#datasets) below.
-- Note: For training, we currently support [cityscapes](https://www.cityscapes-dataset.com/), and aim to add [VOC](http://host.robots.ox.ac.uk/pascal/VOC/) and [ADE20K](http://groups.csail.mit.edu/vision/datasets/ADE20K/).
+
+### Requirements
+- Python 3.8+
+- PyTorch 2.0+ (with CUDA support recommended)
+- See `requirements.txt` for full dependency list
+
+### Setup
+1. Clone this repository:
+   ```bash
+   git clone <repository-url>
+   cd Fast-SCNN-D-pytorch
+   ```
+
+2. Create a virtual environment (recommended):
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Download the Cityscapes dataset (see [Datasets](#datasets) section below)
+
+### Note
+This repository extends the original Fast-SCNN implementation. The base Fast-SCNN code is from [Tramac's repository](https://github.com/Tramac/Fast-SCNN-pytorch).
 
 ## Datasets
-- You can download [cityscapes](https://www.cityscapes-dataset.com/) from [here](https://www.cityscapes-dataset.com/downloads/). Note: please download [leftImg8bit_trainvaltest.zip(11GB)](https://www.cityscapes-dataset.com/file-handling/?packageID=4) and [gtFine_trainvaltest(241MB)](https://www.cityscapes-dataset.com/file-handling/?packageID=1).
 
-## Training-Fast-SCNN
-- By default, we assume you have downloaded the cityscapes dataset in the `./datasets/citys` dir.
-- To train Fast-SCNN using the train script the parameters listed in `train.py` as a flag or manually change them.
-```Shell
-python train.py --model fast_scnn --dataset citys
+### Cityscapes
+For Fast-SCNN-D, you need:
+1. **RGB Images**: [leftImg8bit_trainvaltest.zip](https://www.cityscapes-dataset.com/file-handling/?packageID=4) (11GB)
+2. **Ground Truth**: [gtFine_trainvaltest.zip](https://www.cityscapes-dataset.com/file-handling/?packageID=1) (241MB)
+3. **Disparity Maps**: [disparity_trainvaltest.zip](https://www.cityscapes-dataset.com/file-handling/?packageID=3) (required for Fast-SCNN-D)
+
+Extract all files to `./datasets/citys/` with the following structure:
 ```
+datasets/citys/
+├── leftImg8bit/
+│   ├── train/
+│   ├── val/
+│   └── test/
+├── gtFine/
+│   ├── train/
+│   ├── val/
+│   └── test/
+└── disparity/
+    ├── train/
+    ├── val/
+    └── test/
+```
+
+## Training
+
+### Fast-SCNN (RGB-only baseline)
+```bash
+python scripts/train.py --model fast_scnn --dataset citys --resume <checkpoint_path>
+```
+
+### Fast-SCNN-D (RGB + Depth)
+```bash
+python scripts/train.py --model fast_scnn_d --dataset citys_d --resume <checkpoint_path>
+```
+
+### Training Options
+- `--base-size`: Base image size (default: 1024)
+- `--crop-size`: Crop size for training (default: 768)
+- `--batch-size`: Batch size (default: 8)
+- `--epochs`: Number of training epochs (default: 160)
+- `--lr`: Learning rate (default: 0.01)
+- `--aux`: Use auxiliary loss
+- See `scripts/train.py` for all available options
 
 ## Evaluation
 To evaluate a trained network:
 ```Shell
-python eval.py
+python scripts/eval.py
+```
+
+For comprehensive evaluation with detailed metrics:
+```Shell
+python scripts/evaluate_metrics.py --resume weights/fast_scnn_citys.pth --model fast_scnn --dataset citys
 ```
 
 ## Demo
 Running a demo:
 ```Shell
-python demo.py --model fast_scnn --input-pic './png/berlin_000000_000019_leftImg8bit.png'
+python scripts/demo.py --model fast_scnn --input-pic './png/berlin_000000_000019_leftImg8bit.png'
 ```
 
-## Results
-|Method|Dataset|crop_size|mIoU|pixAcc|
-|:-:|:-:|:-:|:-:|:-:|
-|Fast-SCNN(paper)|cityscapes||||
-|Fast-SCNN(ours)|cityscapes|768|54.84%|92.37%|
+## Scripts
+All utility scripts are located in the `scripts/` directory. See [scripts/README.md](scripts/README.md) for detailed usage:
+- Visualization scripts (qualitative comparison, pipeline visualization, ablation plots)
+- Evaluation scripts
+- Submission preparation
+- Data analysis tools
 
-Note: The result based on crop_size=768, which is different with paper.
+## Results
+
+### Fast-SCNN-D Performance
+|Method|Dataset|crop_size|mIoU|Pixel Acc|FPS|
+|:-:|:-:|:-:|:-:|:-:|:-:|
+|Fast-SCNN (RGB-only)|Cityscapes|768|49.21%|~92%|331.8|
+|Fast-SCNN-D (RGB + Depth)|Cityscapes-D|768|58.96%|~94%|235.1|
+
+**Improvement**: Fast-SCNN-D achieves **+9.75% mIoU** improvement over the RGB-only baseline while maintaining real-time inference speed (>200 FPS).
+
+Note: Results based on crop_size=768. See ablation study for component-wise contributions.
 
 <img src="./png/frankfurt_000001_058914_leftImg8bit.png" width="280" /><img src="./png/frankfurt_000001_058914_gtFine_color.png" width="280" /><img src="./png/frankfurt_000001_058914_seg.png" width="280" />
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(a) test image &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(b) ground truth &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(c) predicted result
 
-## TODO
-- [ ] add distributed training
-- [ ] Support for the VOC, ADE20K dataset
-- [ ] Support TensorBoard
-- [x] save the best model
-- [x] add Ohem Loss
- 
-## Authors
-* [**Tramac**](https://github.com/Tramac)
+## Key Features
 
-## References
-- Rudra PK Poudel. et al. "Fast-SCNN: Fast Semantic Segmentation Network".
+- **Dual-Stream Architecture**: Separate processing paths for RGB and geometry features
+- **Geometry Feature Generator**: Real-time computation of surface normals from disparity
+- **Adaptive Gated Fusion**: Spatially-adaptive weighting of RGB vs depth features
+- **Real-time Performance**: Maintains >200 FPS inference speed
+- **Comprehensive Evaluation**: Detailed metrics and visualization tools
+
+## Project Structure
+
+```
+Fast-SCNN-D-pytorch/
+├── scripts/              # All scripts (training, evaluation, visualization, submission)
+├── models/               # Model definitions (Fast-SCNN, Fast-SCNN-D)
+├── data_loader/          # Dataset loaders (Cityscapes, Cityscapes-D)
+├── utils/                # Utilities (metrics, loss, visualization)
+└── datasets/             # Dataset directory (download Cityscapes here)
+```
+
+## Citation
+
+If you use this code, please cite:
+
+```bibtex
+@article{poudel2019fast,
+  title={Fast-SCNN: Fast Semantic Segmentation Network},
+  author={Poudel, Rudra PK and Liwicki, Stephan and Cipolla, Roberto},
+  journal={arXiv preprint arXiv:1902.04502},
+  year={2019}
+}
+```
+
+And if you use the Fast-SCNN-D extensions:
+```bibtex
+@misc{fastscnnd2024,
+  title={Fast-SCNN-D: Fast Semantic Segmentation with Depth},
+  author={Your Name},
+  year={2024}
+}
+```
+
+## Acknowledgments
+
+- **Base Implementation**: This repository extends [Fast-SCNN-pytorch](https://github.com/Tramac/Fast-SCNN-pytorch) by [Tramac](https://github.com/Tramac)
+- **Original Paper**: "Fast-SCNN: Fast Semantic Segmentation Network" by Rudra PK Poudel, Stephan Liwicki, Roberto Cipolla
+
+## License
+
+See [LICENSE](LICENSE) file for details.

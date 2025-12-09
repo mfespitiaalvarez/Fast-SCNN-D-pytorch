@@ -27,6 +27,8 @@ dist/
 outputs/
 runs/
 tensorboard/
+submission_results/
+
 
 # Datasets
 datasets/

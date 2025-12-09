@@ -1,0 +1,23 @@
+# Fast-SCNN-D Requirements
+# Core dependencies for training, evaluation, and visualization
+
+# Deep Learning
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Scientific Computing
+numpy>=1.20.0
+
+# Image Processing
+opencv-python>=4.5.0
+pillow>=8.0.0
+
+# Visualization
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Utilities
+tqdm>=4.60.0
+
+# Optional: For feature space visualization (PCA)
+scikit-learn>=1.0.0
