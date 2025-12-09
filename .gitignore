@@ -1,0 +1,43 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dll
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs / outputs
+*.log
+outputs/
+runs/
+tensorboard/
+
+# Datasets
+datasets/
+data/
+*.zip
+*.tar.gz
+
+# Generated evaluation results
+evaluation_results_*.json
+evaluation_summary_*.txt
+
+# OS junk
+.DS_Store
+Thumbs.db
