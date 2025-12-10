@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Architecting Fast-SCNN-D: High-Performance RGB-D Segmentation</title>
+  <title>Architecting Fast-SCNN-D: Early Fusion RGB-D Segmentation for Embedded Systems</title>
   <style>
     body {
       font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -48,21 +48,24 @@
 
 <div class="container">
 
-  <h1>Architecting Fast-SCNN-D: A High-Performance RGB-D Segmentation Framework for Embedded Systems</h1>
+  <h1>Architecting Fast-SCNN-D: Early Fusion RGB-D Segmentation for Embedded Systems</h1>
   <div class="authors">
-    By [Your Name] &bull; 6.7960 Deep Learning &bull; Fall 2025
+    By Marcos Espitia-Alvarez &bull; 6.7960 Deep Learning &bull; Fall 2025
   </div>
 
-  <div class="abstract">
+  <!-- <div class="abstract">
     <strong>Abstract:</strong> 
     Real-time semantic segmentation on embedded devices is often limited by the lack of geometric context in pure RGB models. While depth data is readily available in modern robotics, incorporating it usually incurs a high computational cost. In this project, we introduce <strong>Fast-SCNN-D</strong>, a novel architecture that extends the Fast-SCNN framework to efficiently process RGB-D data. We propose a "Pseudo-HHA" generator for real-time geometric feature extraction and a Dual-Stream Learning-to-Downsample module with Adaptive Gated Fusion. Our method aims to improve segmentation accuracy on the Cityscapes dataset while maintaining the high inference speeds required for embedded applications.
-  </div>
+  </div> -->
 
   <h2>1. Introduction</h2>
   
   <h3>1.1 Motivations</h3>
   <p>
     Semantic segmentation is a critical task for autonomous systems, enabling robots to distinguish between drivable surfaces, obstacles, and pedestrians. However, deploying these models on embedded systems (like the NVIDIA Jetson or mobile processors) requires a delicate balance between accuracy and latency. While high-accuracy models exist for desktop GPUs, real-time performance on resource-constrained devices remains a significant challenge.
+  </p>
+  <p>
+    This project was inspired by simultaneous work on semantic segmentation for a capstone project this semester, where I encountered the limitations of RGB-only models in geometrically ambiguous scenarios. That experience piqued my interest in how depth information could resolve ambiguities that pure RGB models struggle with—particularly in distinguishing between visually similar surfaces like roads and sidewalks (in the case of the capstone project, balls and cones from a flying drone). However, the existing RGB-D fusion methods I explored were too computationally expensive for real-time embedded deployment (Intel NUC with no GPU), motivating this investigation into lightweight fusion strategies.
   </p>
   <p>
     Modern robotics platforms increasingly include depth sensors (stereo cameras, LiDAR, structured light), providing rich geometric information that could improve segmentation accuracy. However, incorporating depth data typically requires computationally expensive preprocessing (e.g., HHA encoding <a href="#ref-gupta">[2]</a>) or complex fusion architectures that increase latency beyond acceptable limits for real-time applications.
@@ -114,7 +117,7 @@
     Disparity maps are computed from stereo pairs and provided directly, avoiding the need for depth sensor calibration. We use these disparity maps to generate geometric features without expensive preprocessing.
   </p>
 
-  <h3>2.2 Architectures</h3>
+  <h3>2.2 Architecture</h3>
   <p>
     Our architecture, <strong>Fast-SCNN-D</strong>, extends Fast-SCNN <a href="#ref-fastscnn">[1]</a> to process RGB-D inputs. The key innovation is modifying the "Learning to Downsample" (LDS) module to accept dual-stream inputs while maintaining efficiency. We introduce three key components:
   </p>
@@ -213,24 +216,43 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
   </p>
 
   <div class="figure">
-    <img src="https://via.placeholder.com/800x300?text=Insert+Architecture+Diagram+Here+(Fast-SCNN-D)" alt="Fast-SCNN-D Architecture">
-    <div class="caption"><strong>Figure 1:</strong> The Fast-SCNN-D architecture featuring the Dual-Stream LDS and Adaptive Gated Fusion modules.</div>
+    <div style="display: flex; justify-content: space-around; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 300px;">
+        <img src="fast_scnn_architecture.png" alt="Fast-SCNN Architecture" style="width: 100%;">
+        <div style="text-align: center; margin-top: 10px; font-size: 0.9em; color: #777;">
+          <strong>(a)</strong> Fast-SCNN (Original)
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 300px;">
+        <img src="fast_scnn_d_architecture.png" alt="Fast-SCNN-D Architecture" style="width: 100%;">
+        <div style="text-align: center; margin-top: 10px; font-size: 0.9em; color: #777;">
+          <strong>(b)</strong> Fast-SCNN-D (Ours)
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <strong>Figure 1:</strong> Architecture comparison: (a) Original Fast-SCNN architecture with single RGB stream, and (b) Fast-SCNN-D architecture featuring the Dual-Stream LDS and Adaptive Gated Fusion modules. <em>Note: The Fast-SCNN-D architecture diagram was generated using Gemini AI and edited with Photoshop.</em>
+    </div>
   </div>
 
   <h3>2.3 Training</h3>
   <p>
-    We train Fast-SCNN-D using the following default settings:
+    We train Fast-SCNN-D using the default training parameters as provided in the original Fast-SCNN repository <a href="https://github.com/Tramac/Fast-SCNN-pytorch">[Tramac/Fast-SCNN-pytorch]</a>. All hyperparameters match the default values in <code>scripts/train.py</code> unless otherwise specified. The training configuration is as follows:
     <ul>
       <li><strong>Loss Function:</strong> MixSoftmaxCrossEntropyOHEMLoss with <strong>OHEM</strong> (Online Hard Example Mining) <a href="#ref-ohem">[19]</a> to focus learning on difficult pixels and improve boundary accuracy. The loss combines softmax cross-entropy with online hard example mining, automatically selecting the hardest pixels for training.</li>
       <li><strong>Optimizer:</strong> SGD with momentum 0.9, weight decay 1e-4</li>
       <li><strong>Learning Rate:</strong> Polynomial decay schedule with power 0.9, starting at 0.01 (1e-2). The learning rate follows: \( \text{lr}(t) = \text{lr}_\text{target} + (\text{lr}_\text{base} - \text{lr}_\text{target}) \times (1 - t/N)^{0.9} \), where \(t\) is the current iteration, \(N\) is the total number of iterations, and \(\text{lr}_\text{target} = 0\).</li>
-      <li><strong>Batch Size:</strong> 8</li>
-      <li><strong>Training Epochs:</strong> 160 epochs</li>
+      <li><strong>Batch Size:</strong> 8 (default)</li>
+      <li><strong>Training Epochs:</strong> 160 epochs (default)</li>
       <li><strong>Input Preprocessing:</strong> Images are normalized using ImageNet statistics: mean [0.485, 0.456, 0.406] and std [0.229, 0.224, 0.225]</li>
-      <li><strong>Image Resolution:</strong> Base size 1024, crop size 768×768 for training</li>
-      <li><strong>Data Augmentation:</strong> Random horizontal flipping, random scaling, and random cropping to 768×768</li>
+      <li><strong>Image Resolution:</strong> Base size 1024, crop size 768×768 for training (default)</li>
+      <li><strong>Data Augmentation:</strong> Random horizontal flipping (50% probability), random scaling (short edge between 0.5× and 2.0× base size), random cropping to 768×768, and optional Gaussian blur (50% probability)</li>
+      <li><strong>Auxiliary Loss:</strong> Disabled by default (can be enabled with <code>--aux</code> flag)</li>
     </ul>
     The model is trained from scratch without ImageNet pretraining. The geometry stream (depth processing) and fusion modules are initialized randomly, while the RGB stream follows the standard Fast-SCNN initialization.
+  </p>
+  <p>
+    <strong>Code Availability:</strong> This work extends the original Fast-SCNN implementation. The base Fast-SCNN code is available at <a href="https://github.com/Tramac/Fast-SCNN-pytorch">https://github.com/Tramac/Fast-SCNN-pytorch</a>. Our Fast-SCNN-D implementation and extensions are available at <a href="https://github.com/mfespitiaalvarez/Fast-SCNN-D-pytorch">https://github.com/mfespitiaalvarez/Fast-SCNN-D-pytorch</a>.
   </p>
 
   <h3>2.4 Evaluation</h3>
@@ -239,13 +261,13 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
     <ul>
       <li><strong>Mean Intersection over Union (mIoU):</strong> Average IoU across all 19 classes</li>
       <li><strong>Pixel Accuracy:</strong> Percentage of correctly classified pixels</li>
-      <li><strong>Inference Speed:</strong> Frames per second (FPS) on NVIDIA Jetson Xavier NX and desktop GPU (RTX 3090)</li>
+      <li><strong>Inference Speed:</strong> Frames per second (FPS) measured on various GPUs as specified in the results table</li>
       <li><strong>Model Size:</strong> Number of parameters and model file size</li>
     </ul>
     We compare against:
     <ul>
       <li><strong>Efficient RGB-only baselines:</strong> Fast-SCNN <a href="#ref-fastscnn">[1]</a>, BiSeNet <a href="#ref-bisenet">[7]</a>, ICNet <a href="#ref-icnet">[8]</a>, PIDNet-S <a href="#ref-pidnet">[11]</a></li>
-      <li><strong>High-capacity RGB-D models:</strong> FuseNet <a href="#ref-fusenet">[13]</a>, RedNet <a href="#ref-rednet">[14]</a> (for accuracy comparison)</li>
+      <li><strong>High-capacity RGB-D models:</strong> DiPFormer <a href="#ref-dipformer">[21]</a>, FuseNet <a href="#ref-fusenet">[13]</a>, RedNet <a href="#ref-rednet">[14]</a> (for accuracy comparison)</li>
       <li><strong>High-capacity RGB-only models:</strong> DeepLabV3+ <a href="#ref-deeplabv3plus">[3]</a>, PSPNet <a href="#ref-pspnet">[4]</a> (for upper-bound reference)</li>
     </ul>
   </p>
@@ -254,10 +276,7 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
   
   <h3>3.1 Quantitative Analysis</h3>
   <p>
-    <em>Note: Training is currently finalizing. Preliminary results are presented below.</em>
-  </p>
-  <p>
-    We compare Fast-SCNN-D against the RGB-only baseline and other efficient models:
+    We evaluate Fast-SCNN-D on the official Cityscapes test set and compare against the RGB-only baseline. The original Fast-SCNN paper reports <strong>68.0% mIoU</strong> on the Cityscapes test set at 1024×2048 resolution, achieving 123.5 FPS on a Titan X (Maxwell) GPU. Our Fast-SCNN-D achieves <strong>63.36% mIoU</strong> on the test set at 768×768 resolution, achieving >200 FPS on an RTX 5070 GPU. <strong>Important note:</strong> FPS measurements are hardware-dependent and cannot be directly compared across different GPU architectures (Titan X Maxwell vs RTX 5070). While our method does not exceed the paper's Fast-SCNN result on the test set, we note that resolution differences (1024×2048 vs 768×768) and training configurations may affect direct comparison.
   </p>
   
   <table>
@@ -268,104 +287,73 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
         <th>Input</th>
         <th>Resolution</th>
         <th>mIoU (%)</th>
-        <th>Pixel Acc (%)</th>
         <th>Parameters</th>
-        <th>FPS (Jetson)</th>
+        <th>FPS (Device)</th>
       </tr>
     </thead>
     <tbody>
       <tr>
+        <td>DiPFormer <a href="#ref-dipformer">[21]</a></td>
+        <td>High-Capacity</td>
+        <td>RGB-D</td>
+        <td>2048×1024</td>
+        <td>83.4</td>
+        <td>56.3M</td>
+        <td>-</td>
+      </tr>
+      <tr>
         <td>DeepLabV3+ (ResNet-101) <a href="#ref-deeplabv3plus">[3]</a></td>
         <td>High-Capacity</td>
         <td>RGB</td>
-        <td>1024×512</td>
+        <td>2048x1024</td>
         <td>82.1</td>
-        <td>96.2</td>
-        <td>59.3M</td>
-        <td>~2</td>
-      </tr>
-      <tr>
-        <td>PSPNet (ResNet-101) <a href="#ref-pspnet">[4]</a></td>
-        <td>High-Capacity</td>
-        <td>RGB</td>
-        <td>1024×512</td>
-        <td>81.2</td>
-        <td>95.9</td>
-        <td>65.8M</td>
-        <td>~1.5</td>
-      </tr>
-      <tr>
-        <td>FuseNet <a href="#ref-fusenet">[13]</a></td>
-        <td>High-Capacity</td>
-        <td>RGB-D</td>
-        <td>1024×512</td>
-        <td>76.3</td>
-        <td>94.8</td>
-        <td>134.5M</td>
-        <td>~1</td>
-      </tr>
-      <tr>
-        <td>RedNet <a href="#ref-rednet">[14]</a></td>
-        <td>High-Capacity</td>
-        <td>RGB-D</td>
-        <td>640×480</td>
-        <td>77.4</td>
-        <td>95.1</td>
-        <td>47.8M</td>
-        <td>~3</td>
-      </tr>
-      <tr>
-        <td>BiSeNet <a href="#ref-bisenet">[7]</a></td>
-        <td>Efficient</td>
-        <td>RGB</td>
-        <td>1024×512</td>
-        <td>68.4</td>
-        <td>93.2</td>
-        <td>5.8M</td>
-        <td>~65</td>
-      </tr>
-      <tr>
-        <td>ICNet <a href="#ref-icnet">[8]</a></td>
-        <td>Efficient</td>
-        <td>RGB</td>
-        <td>1024×512</td>
-        <td>69.5</td>
-        <td>93.4</td>
-        <td>26.5M</td>
-        <td>~30</td>
+        <td>60.9M</td>
+        <td>-</td>
       </tr>
       <tr>
         <td>PIDNet-S <a href="#ref-pidnet">[11]</a></td>
         <td>Efficient</td>
         <td>RGB</td>
-        <td>1024×512</td>
-        <td>78.6</td>
-        <td>95.2</td>
-        <td>8.1M</td>
-        <td>~93</td>
+        <td>2048×1024</td>
+        <td>78.8</td>
+        <td>7.6M</td>
+        <td>93.2 FPS (RTX 3090)</td>
+      </tr>
+      <tr>
+        <td>BiSeNet (Xception39) <a href="#ref-bisenet">[7]</a></td>
+        <td>Efficient</td>
+        <td>RGB</td>
+        <td>2048x1024</td>
+        <td>68.4</td>
+        <td>5.8M</td>
+        <td>105.8 FPS (Titan XP)</td>
       </tr>
       <tr>
         <td><strong>Fast-SCNN (Baseline)</strong> <a href="#ref-fastscnn">[1]</a></td>
         <td>Efficient</td>
         <td>RGB</td>
-        <td>768×768</td>
-        <td>54.84</td>
-        <td>92.37</td>
+        <td>2048x1024</td>
+        <td>68.0</td>
         <td><strong>1.1M</strong></td>
-        <td>~120</td>
+        <td>123.5 FPS(Titan X Maxwell)</td>
       </tr>
       <tr>
         <td><strong>Fast-SCNN-D (Ours)</strong></td>
         <td>Efficient</td>
         <td>RGB-D</td>
-        <td>768×768</td>
-        <td><strong>[INSERT VAL]</strong></td>
-        <td><strong>[INSERT VAL]</strong></td>
-        <td>~1.3M</td>
-        <td><strong>[INSERT VAL]</strong></td>
+        <td>2048x1024</td>
+        <td><strong>63.36</strong> <sup>†</sup></td>
+        <td>1.3M</td>
+        <td>205.68 FPS (RTX 5070)</td>
       </tr>
     </tbody>
   </table>
+  <p>
+    <sup>†</sup> Results on official Cityscapes test set (1,525 images). Fast-SCNN baseline result (68.0% mIoU) is from the original paper <a href="#ref-fastscnn">[1]</a> at 1024×2048 resolution, measured at 123.5 FPS on Titan X (Maxwell). Fast-SCNN-D result (63.36% mIoU) is at 768×768 resolution, achieving >200 FPS on RTX 5070. <strong>Note:</strong> FPS comparisons across different GPUs (Titan X Maxwell vs RTX 5070) are not directly comparable due to hardware differences. At test set evaluation, Fast-SCNN-D does not exceed the paper's Fast-SCNN result, likely due to resolution differences and training configuration variations.
+  </p>
+  <p>
+    <strong>Note on excluded models:</strong> Several notable RGB-D segmentation models (e.g., ESANet) were not included in this comparison table because they were not trained or evaluated on the Cityscapes dataset. To ensure fair comparison, we only include models with reported results on Cityscapes test or validation sets.
+  </p>
 
   <h3>3.2 Qualitative Results</h3>
   <p>
@@ -373,65 +361,36 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
   </p>
 
   <div class="figure">
-    <img src="https://via.placeholder.com/800x400?text=RGB+vs+RGB-D+Prediction+Comparison" alt="Qualitative Results">
-    <div class="caption"><strong>Figure 2:</strong> Qualitative comparison on the validation set. (Left) Input Image. (Center) RGB-only Prediction. (Right) Fast-SCNN-D Prediction. Note the improved segmentation of sidewalks and better boundary delineation.</div>
+    <img src="qualitative_comparison.png" alt="Qualitative Results">
+    <div class="caption"><strong>Figure 2:</strong> Qualitative comparison on the validation set. From left to right: Input RGB image, Disparity map, Fast-SCNN (RGB-only) prediction, Fast-SCNN-D (RGB-D) prediction, and Ground Truth. Note the improved segmentation of sidewalks, better boundary delineation, and more accurate classification of geometrically ambiguous regions in the Fast-SCNN-D predictions.</div>
   </div>
+
+  <h3>3.3 Pipeline Visualization</h3>
+  <p>
+    The following figure illustrates the internal pipeline of Fast-SCNN-D, showing how the model processes RGB and disparity inputs through the geometry feature generator, dual-stream architecture, and adaptive gated fusion to produce the final segmentation output.
+  </p>
+
+  <div class="figure">
+    <img src="pipeline_visualization.png" alt="Pipeline Visualization">
+    <div class="caption"><strong>Figure 3:</strong> Fast-SCNN-D pipeline visualization showing intermediate processing steps. From left to right: (1) Input RGB image, (2) Input disparity map, (3) Generated surface normals (Normal_X and Normal_Y components), (4) Adaptive gated fusion alpha values (heatmap showing trust in RGB vs. depth at each location), and (5) Final segmentation output. The alpha heatmap reveals that the network learns to trust depth information in geometrically structured regions (low alpha, shown in green) and RGB information in regions with unreliable depth (high alpha, shown in red).</div>
+  </div>
+
+  <h3>3.4 Per-Class Performance</h3>
+  <p>
+    Fast-SCNN-D shows strong performance across most semantic classes on the Cityscapes test set. The model achieves particularly high IoU scores for large, geometrically distinct classes such as <strong>road (97.32%)</strong>, <strong>building (89.02%)</strong>, <strong>vegetation (90.52%)</strong>, <strong>sky (93.30%)</strong>, and <strong>car (91.49%)</strong>. The incorporation of depth information helps the model better distinguish between geometrically similar classes, as evidenced by improved performance on <strong>sidewalk (77.71%)</strong> and <strong>terrain (67.98%)</strong> compared to RGB-only baselines. Smaller objects and thin structures (e.g., pole: 45.14%, traffic light: 51.95%) remain challenging due to the aggressive downsampling in the dual-stream architecture, consistent with the limitations discussed in Section 4.3.
+  </p>
+  <p>
+    At the category level, Fast-SCNN-D achieves <strong>84.33% IoU</strong> for categories, with particularly strong performance on <strong>flat surfaces (98.07%)</strong>, <strong>vehicles (90.89%)</strong>, and <strong>construction (89.43%)</strong>. The model maintains competitive performance on <strong>human (74.50% IoU, 48.61% iIoU)</strong> and <strong>vehicle (90.89% IoU, 81.44% iIoU)</strong> categories, demonstrating the effectiveness of depth information for object-level segmentation.
+  </p>
 
   <h2>4. Discussion</h2>
   <p>
-    Our results demonstrate that incorporating geometry into efficient segmentation networks is a viable strategy for embedded systems, but more importantly, they reveal insights about <strong>how</strong> multimodal fusion can be designed to balance efficiency and accuracy.
-  </p>
-  
-  <h3>4.1 Architectural Insights</h3>
-  <p>
-    <strong>Single-Stage vs. Multi-Stage Fusion:</strong> Our single-stage fusion after the dual-stream LDS module demonstrates that early fusion can be sufficient for capturing geometric dependencies, contrary to multi-stage approaches like SA-Gate. The key insight is that by processing RGB and depth through parallel streams with identical architectures, we preserve modality-specific features while enabling the fusion gate to learn complementary relationships. This suggests that the bottleneck in multimodal fusion is not necessarily the number of fusion stages, but rather the quality of the feature representations before fusion.
-  </p>
-  <p>
-    <strong>GPU-Accelerated Geometric Features:</strong> The <strong>Pseudo-HHA</strong> generator incurs negligible latency because it operates as a fixed set of convolution kernels on the GPU, avoiding CPU bottlenecks that plague traditional HHA encoding. This architectural choice demonstrates that moving preprocessing into the network (as differentiable operations) eliminates data transfer overhead and enables real-time performance. The surface normal approximation using Sobel filters, while simpler than full HHA encoding, provides sufficient geometric context for the segmentation task.
-  </p>
-  <p>
-    <strong>Adaptive Gating Behavior:</strong> Analysis of the learned gate weights \(\alpha\) reveals that the Adaptive Gated Fusion mechanism learns to suppress depth features in regions where disparity is unreliable. In areas with invalid stereo matches (e.g., reflective surfaces, textureless regions, or far distances), the gate learns to set \(\alpha \approx 1\), effectively relying entirely on RGB features. Conversely, in regions with reliable depth (e.g., clear object boundaries, structured surfaces), the gate learns to balance both modalities (\(\alpha \approx 0.5\)) or emphasize depth (\(\alpha < 0.5\)) where geometric context is most valuable. This learned behavior demonstrates that the network is not simply averaging modalities, but actively making architectural decisions about which modality to trust at each spatial location.
-  </p>
-  
-  <h3>4.2 Comparison with High-Capacity Models</h3>
-  <p>
-    Compared to high-capacity RGB-D models like FuseNet and RedNet, Fast-SCNN-D achieves a better accuracy-speed tradeoff, making it suitable for real-time embedded applications. While high-capacity models achieve higher absolute accuracy, they are impractical for deployment on resource-constrained devices. More importantly, our results suggest that the accuracy gap may not be due to the fusion mechanism itself, but rather the capacity of the backbone network. This raises an interesting architectural question: could high-capacity models achieve similar accuracy with our lightweight fusion approach?
+    Our results demonstrate that Fast-SCNN-D successfully incorporates depth information while maintaining real-time performance (>200 FPS). The GPU-accelerated geometry feature generator eliminates CPU bottlenecks, and the adaptive gated fusion mechanism learns to handle noisy depth data gracefully. However, our early single-stage fusion approach, while efficient, may not fully leverage depth information compared to high-capacity models like DiPFormer <a href="#ref-dipformer">[21]</a> (83.4% mIoU). The model struggles with thin structures due to aggressive downsampling and relies on depth quality, limiting performance in regions with invalid disparity. Future work should investigate whether more sophisticated fusion strategies (multi-stage fusion, later fusion points) can improve the efficiency-accuracy tradeoff while remaining suitable for embedded deployment.
   </p>
 
-  <h3>4.3 Failure Analysis</h3>
+  <h2>5. Conclusion</h2>
   <p>
-    <strong>Thin Structures and High-Frequency Details:</strong> The model struggles with thin structures (e.g., poles, wires, thin railings) that require high-frequency depth details. This failure mode can be attributed to the aggressive downsampling in the dual-stream LDS module (stride 2×2×2 = 8× total reduction), which loses fine-grained geometric information before fusion. The single-stage fusion architecture, while efficient, cannot recover this lost detail. This suggests a fundamental tradeoff: early fusion gains efficiency but sacrifices the ability to leverage high-resolution depth cues for small objects.
-  </p>
-  <p>
-    <strong>Depth Quality Dependency:</strong> The model relies heavily on the quality of the disparity map. In areas with reflective surfaces (like car windows), stereo-disparity is often invalid, causing the Adaptive Gated Fusion to rely entirely on RGB features. While the gate mechanism handles this gracefully, it means the model cannot leverage depth information in these regions, limiting the benefit of multimodal fusion. This reveals a limitation of our approach: the gate can suppress bad depth, but cannot compensate for missing depth information.
-  </p>
-  <p>
-    <strong>Geometric Ambiguity in Textureless Regions:</strong> In textureless regions (e.g., large flat walls, sky), both RGB and depth provide limited information. The gate mechanism, while adaptive, cannot create information that doesn't exist in either modality. This suggests that our lightweight fusion approach may benefit from additional context (e.g., global scene understanding) that high-capacity models capture through their larger receptive fields.
-  </p>
-  
-  <h3>4.4 Limitations and Future Work</h3>
-  <p>
-    <strong>Dataset Constraints:</strong> Our evaluation is limited to Cityscapes, which provides high-quality stereo disparity maps. Real-world depth sensors (e.g., LiDAR, structured light) may have different noise characteristics and require adaptation. Future work should investigate whether the learned gate behavior generalizes to different depth modalities.
-  </p>
-  <p>
-    <strong>Computational Overhead:</strong> While minimal, the dual-stream architecture and fusion module do increase latency compared to the RGB-only baseline (~15-20% overhead). The tradeoff between accuracy and speed must be carefully considered for specific applications. However, this overhead is significantly lower than multi-stage fusion approaches, validating our architectural choice.
-  </p>
-  <p>
-    <strong>Future Work:</strong> Potential improvements include: (1) investigating whether multi-scale fusion (fusing at multiple resolutions) can capture high-frequency details while maintaining efficiency, (2) exploring depth completion networks as a preprocessing step to handle invalid depth regions, and (3) analyzing whether the learned gate behavior is consistent across different scenes and depth qualities, which would validate the generalizability of our architectural approach.
-  </p>
-
-  <h2>5. Implications</h2>
-  <p>
-    Fast-SCNN-D demonstrates that lightweight architectural changes can effectively leverage multimodal data, pushing the boundaries of what is possible on edge devices. Our work shows that:
-    <ul>
-      <li><strong>Efficient RGB-D fusion is feasible:</strong> With careful design, depth information can be incorporated into real-time segmentation networks without prohibitive computational cost</li>
-      <li><strong>GPU-accelerated preprocessing matters:</strong> Moving geometric feature computation to GPU eliminates CPU bottlenecks and enables real-time performance</li>
-      <li><strong>Adaptive fusion improves robustness:</strong> Adaptive gated fusion allows the network to handle noisy depth data gracefully, making the approach practical for real-world applications</li>
-      <li><strong>Tradeoffs are manageable:</strong> The accuracy gains from depth information justify the modest increase in model size and latency for many embedded applications</li>
-    </ul>
-  </p>
-  <p>
-    This work opens avenues for deploying more accurate semantic segmentation on autonomous robots, drones, and mobile devices where depth sensors are increasingly common. The efficient architecture enables real-time performance while leveraging the geometric context that depth provides, addressing a key limitation of RGB-only models.
+    We present Fast-SCNN-D, an extension of Fast-SCNN that incorporates depth information through a dual-stream architecture with adaptive gated fusion. Our approach demonstrates that depth information can be integrated into efficient segmentation networks while maintaining real-time performance (>200 FPS). Key contributions include a GPU-accelerated geometry feature generator that eliminates CPU bottlenecks, and a lightweight adaptive fusion mechanism that handles noisy depth data gracefully. While our single-stage fusion approach maintains efficiency, results suggest that more sophisticated fusion strategies may be necessary to fully exploit depth information for embedded RGB-D segmentation. Future work should investigate the minimal fusion complexity needed to achieve the full potential of depth-augmented segmentation while maintaining real-time performance on resource-constrained devices.
   </p>
 
   <h2>Acknowledgments</h2>
@@ -469,6 +428,7 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
     <li id="ref-cityscapes">Cordts, M., Omran, M., Ramos, S., Rehfeld, T., Enzweiler, M., Benenson, R., ... & Schiele, B. (2016). The cityscapes dataset for semantic urban scene understanding. <em>Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 3213-3223.</li>
     <li id="ref-ohem">Shrivastava, A., Gupta, A., & Girshick, R. (2016). Training region-based object detectors with online hard example mining. <em>Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)</em>, 761-769.</li>
     <li id="ref-sobel">Sobel, I., & Feldman, G. (1968). A 3x3 isotropic gradient operator for image processing. <em>Stanford Artificial Intelligence Laboratory</em>, 271-272.</li>
+    <li id="ref-dipformer">Chen, S., Han, T., Zhang, C., Liu, W., Su, J., Wang, Z., & Cai, G. (2024). Depth Matters: Exploring Deep Interactions of RGB-D for Semantic Segmentation in Traffic Scenes. <em>arXiv preprint arXiv:2409.07995</em>.</li>
   </ol>
 
 </div>

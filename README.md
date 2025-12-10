@@ -124,15 +124,36 @@ All utility scripts are located in the `scripts/` directory. See [scripts/README
 
 ## Results
 
-### Fast-SCNN-D Performance
+### Official Cityscapes Test Set Results
+
+**Fast-SCNN-D** on Cityscapes test set (submitted to official evaluation server):
+
+| Metric | Value |
+|:------:|:-----:|
+| **IoU Classes** | **63.36%** |
+| **iIoU Classes** | **33.85%** |
+| **IoU Categories** | **84.33%** |
+| **iIoU Categories** | **65.02%** |
+
+### Validation Set Results
+
 |Method|Dataset|crop_size|mIoU|Pixel Acc|FPS|
 |:-:|:-:|:-:|:-:|:-:|:-:|
 |Fast-SCNN (RGB-only)|Cityscapes|768|49.21%|~92%|331.8|
 |Fast-SCNN-D (RGB + Depth)|Cityscapes-D|768|58.96%|~94%|235.1|
 
-**Improvement**: Fast-SCNN-D achieves **+9.75% mIoU** improvement over the RGB-only baseline while maintaining real-time inference speed (>200 FPS).
+**Improvement**: Fast-SCNN-D achieves **+9.75% mIoU** improvement over the RGB-only baseline on validation set while maintaining real-time inference speed (>200 FPS).
 
-Note: Results based on crop_size=768. See ablation study for component-wise contributions.
+### Per-Class Performance (Test Set)
+
+Top performing classes:
+- **Road**: 97.32% IoU
+- **Sky**: 93.30% IoU  
+- **Car**: 91.49% IoU
+- **Vegetation**: 90.52% IoU
+- **Building**: 89.02% IoU
+
+Note: Test set results from official Cityscapes evaluation server. Validation results based on crop_size=768. See ablation study for component-wise contributions.
 
 <img src="./png/frankfurt_000001_058914_leftImg8bit.png" width="280" /><img src="./png/frankfurt_000001_058914_gtFine_color.png" width="280" /><img src="./png/frankfurt_000001_058914_seg.png" width="280" />
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(a) test image &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(b) ground truth &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(c) predicted result
