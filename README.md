@@ -10,7 +10,7 @@ This project is based on the Fast-SCNN repository by [Tramac](https://github.com
 - **Adaptive Gated Fusion**: Learns to dynamically weight RGB vs depth features
 - **Dual-stream architecture**: Processes RGB and geometry features separately before fusion
 
-<p align="center"><img width="100%" src="./png/Fast-SCNN.png" /></p>
+<p align="center"><img width="100%" src="./submission/fast_scnn_d_architecture.png" /></p>
 
 ## Table of Contents
 - <a href='#installation'>Installation</a>
@@ -152,11 +152,6 @@ Top performing classes:
 - **Car**: 91.49% IoU
 - **Vegetation**: 90.52% IoU
 - **Building**: 89.02% IoU
-
-Note: Test set results from official Cityscapes evaluation server. Validation results based on crop_size=768. See ablation study for component-wise contributions.
-
-<img src="./png/frankfurt_000001_058914_leftImg8bit.png" width="280" /><img src="./png/frankfurt_000001_058914_gtFine_color.png" width="280" /><img src="./png/frankfurt_000001_058914_seg.png" width="280" />
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(a) test image &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(b) ground truth &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;(c) predicted result
 
 ## Key Features
 

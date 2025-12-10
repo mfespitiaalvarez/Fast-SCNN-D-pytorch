@@ -231,7 +231,7 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
       </div>
     </div>
     <div class="caption">
-      <strong>Figure 1:</strong> Architecture comparison: (a) Original Fast-SCNN architecture with single RGB stream, and (b) Fast-SCNN-D architecture featuring the Dual-Stream LDS and Adaptive Gated Fusion modules. <em>Note: The Fast-SCNN-D architecture diagram was generated using Gemini AI and edited with Photoshop.</em>
+      <strong>Figure 1:</strong> Architecture comparison: (a) Original Fast-SCNN architecture with single RGB stream, and (b) Fast-SCNN-D architecture featuring the Dual-Stream LDS and Adaptive Gated Fusion modules. <em>The Fast-SCNN-D architecture diagram was generated using Gemini AI and edited with Photoshop.</em>
     </div>
   </div>
 
@@ -276,7 +276,7 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
   
   <h3>3.1 Quantitative Analysis</h3>
   <p>
-    We evaluate Fast-SCNN-D on the official Cityscapes test set and compare against the RGB-only baseline. The original Fast-SCNN paper reports <strong>68.0% mIoU</strong> on the Cityscapes test set at 1024×2048 resolution, achieving 123.5 FPS on a Titan X (Maxwell) GPU. Our Fast-SCNN-D achieves <strong>63.36% mIoU</strong> on the test set at 768×768 resolution, achieving >200 FPS on an RTX 5070 GPU. <strong>Important note:</strong> FPS measurements are hardware-dependent and cannot be directly compared across different GPU architectures (Titan X Maxwell vs RTX 5070). While our method does not exceed the paper's Fast-SCNN result on the test set, we note that resolution differences (1024×2048 vs 768×768) and training configurations may affect direct comparison.
+    We evaluate Fast-SCNN-D on the official Cityscapes test set and compare against the RGB-only baseline. The original Fast-SCNN paper reports <strong>68.0% mIoU</strong> on the Cityscapes test set at 1024×2048 resolution, achieving 123.5 FPS on a Titan X (Maxwell) GPU. Our Fast-SCNN-D achieves <strong>63.36% mIoU</strong> on the test set at 768×768 resolution, achieving >200 FPS on an RTX 5070 GPU. FPS measurements are hardware-dependent and cannot be directly compared across different GPU architectures (Titan X Maxwell vs RTX 5070). While our method does not exceed the paper's Fast-SCNN result on the test set, resolution differences (1024×2048 vs 768×768) and training configurations may affect direct comparison.
   </p>
   
   <table>
@@ -349,10 +349,10 @@ return torch.cat([disparity, norm_x, norm_y], dim=1)  # [B, 3, H, W]
     </tbody>
   </table>
   <p>
-    <sup>†</sup> Results on official Cityscapes test set (1,525 images). Fast-SCNN baseline result (68.0% mIoU) is from the original paper <a href="#ref-fastscnn">[1]</a> at 1024×2048 resolution, measured at 123.5 FPS on Titan X (Maxwell). Fast-SCNN-D result (63.36% mIoU) is at 768×768 resolution, achieving >200 FPS on RTX 5070. <strong>Note:</strong> FPS comparisons across different GPUs (Titan X Maxwell vs RTX 5070) are not directly comparable due to hardware differences. At test set evaluation, Fast-SCNN-D does not exceed the paper's Fast-SCNN result, likely due to resolution differences and training configuration variations.
+    <sup>†</sup> Results on official Cityscapes test set (1,525 images). Fast-SCNN baseline result (68.0% mIoU) is from the original paper <a href="#ref-fastscnn">[1]</a> at 1024×2048 resolution, measured at 123.5 FPS on Titan X (Maxwell). Fast-SCNN-D result (63.36% mIoU) is at 768×768 resolution, achieving >200 FPS on RTX 5070. FPS comparisons across different GPUs (Titan X Maxwell vs RTX 5070) are not directly comparable due to hardware differences. At test set evaluation, Fast-SCNN-D does not exceed the paper's Fast-SCNN result, likely due to resolution differences and training configuration variations.
   </p>
   <p>
-    <strong>Note on excluded models:</strong> Several notable RGB-D segmentation models (e.g., ESANet) were not included in this comparison table because they were not trained or evaluated on the Cityscapes dataset. To ensure fair comparison, we only include models with reported results on Cityscapes test or validation sets.
+    Several notable RGB-D segmentation models (e.g., ESANet) were not included in this comparison table because they were not trained or evaluated on the Cityscapes dataset. To ensure fair comparison, we only include models with reported results on Cityscapes test or validation sets.
   </p>
 
   <h3>3.2 Qualitative Results</h3>
